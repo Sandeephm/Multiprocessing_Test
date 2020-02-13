@@ -110,6 +110,7 @@ for filepath in files:
         plt.show()
 '''
 
+filepath = files[0]
 list1 = []
 s = ""
 head_tail = os.path.split(filepath)
@@ -135,4 +136,23 @@ for i in range(12):
 
 boundary_I,R_peak_index_I = Boundary_Detection(Denoised[:,1])
 
-print(R_peak_index_I) 
+R_peak_idx = 0
+
+for i in range(len(R_peak_index_I)):
+        if( (boundary_I[0]<R_peak_index_I[i]) and (boundary_I[1]>R_peak_index_I[i]) ):
+                R_peak_idx = i
+                break
+
+fe_param_I = np.zeros((1000 3),len(boundary_I) - 1)
+
+for i in range(0,len(boundary_I) - 1):
+        #P_wave,QRS_wave,T_wave = hybrid_tdmg_FE_new(Denoised[boundary_I[i] : boundary_I[i + 1],j],range(boundary_I[i],boundary_I[i + 1]), R_peak_index_I[R_peak_idx] - boundary_I[i])
+        fe_param_I[i] = Denoised[:,1] + [boundary_I[i]] + [boundary_I[i+1]] +  [R_peak_index_I[R_peak_idx] - boundary_I[i]]
+        R_peak_idx = R_peak_idx + 1
+
+
+print(R_peak_index_I)
+
+print(boundary_I)
+
+print(fe_param_I[:,10000-10002])
