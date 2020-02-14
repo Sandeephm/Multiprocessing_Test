@@ -11,6 +11,27 @@ import xlsxwriter
 import time
 import concurrent.futures
 
+def Feature_extraction(ecg_signal,boundary,R_peak):
+
+    R_peak_idx = 0
+
+    for i in range(len(R_peak)):
+            if( (boundary[0]<R_peak[i]) and (boundary[1]>R_peak[i]) ):
+                    R_peak_idx = i
+                    break
+
+    P_vector = []
+    QRS_vector = []
+    T_vector = []
+
+    for i in range(0,len(boundary) - 1):
+        result = hybrid_tdmg_FE_new(ecg_signal[boundary[i] : boundary[i + 1]],range(boundary[i],boundary[i + 1]), R_peak[R_peak_idx] - boundary[i])
+        R_peak_idx = R_peak_idx + 1
+        P_vector = P_vector + result[0]
+        QRS_vector = QRS_vector + result[1]
+        T_vector = T_vector + result[2]
+
+    return P_vector,QRS_vector,T_vector
 
 files = glob.glob("E:\ECG Matlab\PTBDB_BDFE_GOLDEN\PTDB\*.csv")
 
@@ -135,7 +156,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-
+    ######################################## Filtering ECG Signal
 
     ecg_in = []
 
@@ -144,30 +165,16 @@ if __name__ == '__main__':
             ecg_in.append(executor.submit(denoising,data[:,i]))
 
         i = 0
-        for f in concurrent.futures.as_completed(ecg_in):
+        concurrent.futures.wait(ecg_in, timeout=None, return_when=concurrent.futures.ALL_COMPLETED)
+        for f in ecg_in:
             Denoised[:,i] = f.result()
             i = i + 1
 
-    #for i in range(12):
-    #        Denoised[:,i] = denoising(data[:,i])
 
-    #print(time.process_time() - start)
+    ################################################################
 
 
-
-    #boundary_I,R_peak_index_I = Boundary_Detection(Denoised[:,0])
-    #boundary_II,R_peak_index_II = Boundary_Detection(Denoised[:,1])
-    #boundary_III,R_peak_index_III = Boundary_Detection(Denoised[:,2])
-    #boundary_avr,R_peak_index_avr = Boundary_Detection(Denoised[:,3])
-    #boundary_avl,R_peak_index_avl = Boundary_Detection(Denoised[:,4])
-    #boundary_avf,R_peak_index_avf = Boundary_Detection(Denoised[:,5])
-    #boundary_V1,R_peak_index_V1 = Boundary_Detection(Denoised[:,6])
-    #boundary_V2,R_peak_index_V2 = Boundary_Detection(Denoised[:,7])
-    #boundary_V3,R_peak_index_V3 = Boundary_Detection(Denoised[:,8])
-    #boundary_V4,R_peak_index_V4 = Boundary_Detection(Denoised[:,9])
-    #boundary_V5,R_peak_index_V5 = Boundary_Detection(Denoised[:,10])
-    #boundary_V6,R_peak_index_V6 = Boundary_Detection(Denoised[:,11])
-
+    ######################################## Boundary Detection on ECG Signal
     bd_param = []
     bd_results = []
 
@@ -175,50 +182,60 @@ if __name__ == '__main__':
         for i in range(0,12):
             bd_param.append(executor.submit(Boundary_Detection,Denoised[:,i]))
 
-        for f in concurrent.futures.as_completed(bd_param):
+        concurrent.futures.wait(bd_param, timeout=None, return_when=concurrent.futures.ALL_COMPLETED)
+        for f in bd_param:
             bd_results.append(f.result())
-    time.sleep(0.5)
-    print(bd_results[0][0])
-
 
     R_peak_idx = 0
-    boundary_I = bd_results[0][0]
-    R_peak_index_I = bd_results[0][1]
+    ################################################################
 
-
-    for i in range(len(R_peak_index_I)):
-            if( (boundary_I[0]<R_peak_index_I[i]) and (boundary_I[1]>R_peak_index_I[i]) ):
-                    R_peak_idx = i
-                    break
-
-    results = []
+    fe_param = []
+    fe_results = []
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        for i in range(0,len(boundary_I) - 1):
-                #P_wave,QRS_wave,T_wave = hybrid_tdmg_FE_new(Denoised[boundary_I[i] : boundary_I[i + 1],1],range(boundary_I[i],boundary_I[i + 1]), R_peak_index_I[R_peak_idx] - boundary_I[i])
-                results.append(executor.submit(hybrid_tdmg_FE_new,Denoised[boundary_I[i] : boundary_I[i + 1],1],range(boundary_I[i],boundary_I[i + 1]), R_peak_index_I[R_peak_idx] - boundary_I[i]))
-                R_peak_idx = R_peak_idx + 1
+        for i in range(0,12):
+            fe_param.append(executor.submit(Feature_extraction,Denoised[:,i],bd_results[i][0],bd_results[i][1]))
 
-        for f in concurrent.futures.as_completed(results):
-            print(f.result())
+        concurrent.futures.wait(fe_param, timeout=None, return_when=concurrent.futures.ALL_COMPLETED)
+        for f in fe_param:
+            fe_results.append(f.result())
+
+    '''
+    boundary_I = bd_results[0][0]
+    boundary_II = bd_results[1][0]
+    boundary_III = bd_results[2][0]
+    boundary_avr = bd_results[3][0]
+    boundary_avl = bd_results[4][0]
+    boundary_avf = bd_results[5][0]
+    boundary_V1 = bd_results[6][0]
+    boundary_V2 = bd_results[7][0]
+    boundary_V3 = bd_results[8][0]
+    boundary_V4 = bd_results[9][0]
+    boundary_V5 = bd_results[10][0]
+    boundary_V6 = bd_results[11][0]
+
+    R_peak_index_I = bd_results[0][1]
+    R_peak_index_II = bd_results[1][1]
+    R_peak_index_III = bd_results[2][1]
+    R_peak_index_avr = bd_results[3][1]
+    R_peak_index_avl = bd_results[4][1]
+    R_peak_index_avf = bd_results[5][1]
+    R_peak_index_V1 = bd_results[6][1]
+    R_peak_index = bd_results[7][1]
+    R_peak_index = bd_results[8][1]
+    R_peak_index = bd_results[9][1]
+    R_peak_index = bd_results[10][1]
+    R_peak_index = bd_results[11][1]
+
+    P_vector_I,QRS_vector_I,T_vector_I = Feature_extraction(Denoised[:,0],boundary_I,R_peak_index_I)
+    P_vector_II,QRS_vector_II,T_vector_II = Feature_extraction(Denoised[:,1],boundary_II,R_peak_index_II)
+    P_vector_III,QRS_vector_III,T_vector_III = Feature_extraction(Denoised[:,2],boundary_III,R_peak_index_III)
+
+    print(QRS_vector_I)
+    print(QRS_vector_II)
+    print(QRS_vector_III)
+    '''
+
 
     end_time = time.time()
     print(end_time-start_time)
-
-
-
-'''
-fe_param_I = np.zeros((1000 3),len(boundary_I) - 1)
-
-for i in range(0,len(boundary_I) - 1):
-        #P_wave,QRS_wave,T_wave = hybrid_tdmg_FE_new(Denoised[boundary_I[i] : boundary_I[i + 1],j],range(boundary_I[i],boundary_I[i + 1]), R_peak_index_I[R_peak_idx] - boundary_I[i])
-        fe_param_I[i] = Denoised[:,1] + [boundary_I[i]] + [boundary_I[i+1]] +  [R_peak_index_I[R_peak_idx] - boundary_I[i]]
-        R_peak_idx = R_peak_idx + 1
-
-
-print(R_peak_index_I)
-
-print(boundary_I)
-
-print(fe_param_I[:,10000-10002])
-'''
