@@ -9,6 +9,7 @@ import os
 import glob
 import xlsxwriter
 import time
+import concurrent.futures
 
 
 files = glob.glob("E:\ECG Matlab\PTBDB_BDFE_GOLDEN\PTDB\*.csv")
@@ -110,39 +111,54 @@ for filepath in files:
         plt.show()
 '''
 
-filepath = files[0]
-list1 = []
-s = ""
-head_tail = os.path.split(filepath)
-tail = head_tail[1]
-tail= tail.split('.csv')
-name = tail[0]
-list1.append('E:\Python Updated Code\BD+FE_python\\')
-list1.append(name)
-list1.append('.xlsx')
-s = s.join(list1)
-print(s)
+if __name__ == '__main__':
+
+    filepath = files[0]
+    list1 = []
+    s = ""
+    head_tail = os.path.split(filepath)
+    tail = head_tail[1]
+    tail= tail.split('.csv')
+    name = tail[0]
+    list1.append('E:\Python Updated Code\BD+FE_python\\')
+    list1.append(name)
+    list1.append('.xlsx')
+    s = s.join(list1)
+    print(s)
 
 
-data_f = pd.read_csv(filepath, sep=',',header=None)
-data = data_f.as_matrix()
+    data_f = pd.read_csv(filepath, sep=',',header=None)
+    data = data_f.as_matrix()
 
 
-Denoised = np.zeros((len(data),12))
+    Denoised = np.zeros((len(data),12))
 
 
-for i in range(12):
-        Denoised[:,i] = denoising(data[:,i])
+    for i in range(12):
+            Denoised[:,i] = denoising(data[:,i])
 
-boundary_I,R_peak_index_I = Boundary_Detection(Denoised[:,1])
+    boundary_I,R_peak_index_I = Boundary_Detection(Denoised[:,1])
 
-R_peak_idx = 0
+    R_peak_idx = 0
 
-for i in range(len(R_peak_index_I)):
-        if( (boundary_I[0]<R_peak_index_I[i]) and (boundary_I[1]>R_peak_index_I[i]) ):
-                R_peak_idx = i
-                break
+    for i in range(len(R_peak_index_I)):
+            if( (boundary_I[0]<R_peak_index_I[i]) and (boundary_I[1]>R_peak_index_I[i]) ):
+                    R_peak_idx = i
+                    break
 
+    results = []
+
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        for i in range(0,len(boundary_I) - 1):
+                #P_wave,QRS_wave,T_wave = hybrid_tdmg_FE_new(Denoised[boundary_I[i] : boundary_I[i + 1],j],range(boundary_I[i],boundary_I[i + 1]), R_peak_index_I[R_peak_idx] - boundary_I[i])
+                results.append(executor.submit(hybrid_tdmg_FE_new),Denoised[boundary_I[i] : boundary_I[i + 1],j],range(boundary_I[i],boundary_I[i + 1]), R_peak_index_I[R_peak_idx] - boundary_I[i])
+                R_peak_idx = R_peak_idx + 1
+
+        for f in concurrent.futures.as_completed(results):
+            print(f.result())
+
+
+'''
 fe_param_I = np.zeros((1000 3),len(boundary_I) - 1)
 
 for i in range(0,len(boundary_I) - 1):
@@ -156,3 +172,4 @@ print(R_peak_index_I)
 print(boundary_I)
 
 print(fe_param_I[:,10000-10002])
+'''
