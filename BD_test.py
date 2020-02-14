@@ -133,13 +133,58 @@ if __name__ == '__main__':
 
     Denoised = np.zeros((len(data),12))
 
+    start_time = time.time()
 
-    for i in range(12):
-            Denoised[:,i] = denoising(data[:,i])
 
-    boundary_I,R_peak_index_I = Boundary_Detection(Denoised[:,1])
+
+    ecg_in = []
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for i in range(0,12):
+            ecg_in.append(executor.submit(denoising,data[:,i]))
+
+        i = 0
+        for f in concurrent.futures.as_completed(ecg_in):
+            Denoised[:,i] = f.result()
+            i = i + 1
+
+    #for i in range(12):
+    #        Denoised[:,i] = denoising(data[:,i])
+
+    #print(time.process_time() - start)
+
+
+
+    #boundary_I,R_peak_index_I = Boundary_Detection(Denoised[:,0])
+    #boundary_II,R_peak_index_II = Boundary_Detection(Denoised[:,1])
+    #boundary_III,R_peak_index_III = Boundary_Detection(Denoised[:,2])
+    #boundary_avr,R_peak_index_avr = Boundary_Detection(Denoised[:,3])
+    #boundary_avl,R_peak_index_avl = Boundary_Detection(Denoised[:,4])
+    #boundary_avf,R_peak_index_avf = Boundary_Detection(Denoised[:,5])
+    #boundary_V1,R_peak_index_V1 = Boundary_Detection(Denoised[:,6])
+    #boundary_V2,R_peak_index_V2 = Boundary_Detection(Denoised[:,7])
+    #boundary_V3,R_peak_index_V3 = Boundary_Detection(Denoised[:,8])
+    #boundary_V4,R_peak_index_V4 = Boundary_Detection(Denoised[:,9])
+    #boundary_V5,R_peak_index_V5 = Boundary_Detection(Denoised[:,10])
+    #boundary_V6,R_peak_index_V6 = Boundary_Detection(Denoised[:,11])
+
+    bd_param = []
+    bd_results = []
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for i in range(0,12):
+            bd_param.append(executor.submit(Boundary_Detection,Denoised[:,i]))
+
+        for f in concurrent.futures.as_completed(bd_param):
+            bd_results.append(f.result())
+    time.sleep(0.5)
+    print(bd_results[0][0])
+
 
     R_peak_idx = 0
+    boundary_I = bd_results[0][0]
+    R_peak_index_I = bd_results[0][1]
+
 
     for i in range(len(R_peak_index_I)):
             if( (boundary_I[0]<R_peak_index_I[i]) and (boundary_I[1]>R_peak_index_I[i]) ):
@@ -148,14 +193,18 @@ if __name__ == '__main__':
 
     results = []
 
-    with concurrent.futures.ProcessPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor() as executor:
         for i in range(0,len(boundary_I) - 1):
-                #P_wave,QRS_wave,T_wave = hybrid_tdmg_FE_new(Denoised[boundary_I[i] : boundary_I[i + 1],j],range(boundary_I[i],boundary_I[i + 1]), R_peak_index_I[R_peak_idx] - boundary_I[i])
-                results.append(executor.submit(hybrid_tdmg_FE_new),Denoised[boundary_I[i] : boundary_I[i + 1],j],range(boundary_I[i],boundary_I[i + 1]), R_peak_index_I[R_peak_idx] - boundary_I[i])
+                #P_wave,QRS_wave,T_wave = hybrid_tdmg_FE_new(Denoised[boundary_I[i] : boundary_I[i + 1],1],range(boundary_I[i],boundary_I[i + 1]), R_peak_index_I[R_peak_idx] - boundary_I[i])
+                results.append(executor.submit(hybrid_tdmg_FE_new,Denoised[boundary_I[i] : boundary_I[i + 1],1],range(boundary_I[i],boundary_I[i + 1]), R_peak_index_I[R_peak_idx] - boundary_I[i]))
                 R_peak_idx = R_peak_idx + 1
 
         for f in concurrent.futures.as_completed(results):
             print(f.result())
+
+    end_time = time.time()
+    print(end_time-start_time)
+
 
 
 '''
