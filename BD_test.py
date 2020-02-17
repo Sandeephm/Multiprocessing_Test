@@ -189,6 +189,8 @@ if __name__ == '__main__':
     R_peak_idx = 0
     ################################################################
 
+
+    ######################################## FE on ECG Signal
     fe_param = []
     fe_results = []
 
@@ -199,43 +201,54 @@ if __name__ == '__main__':
         concurrent.futures.wait(fe_param, timeout=None, return_when=concurrent.futures.ALL_COMPLETED)
         for f in fe_param:
             fe_results.append(f.result())
-
-    '''
-    boundary_I = bd_results[0][0]
-    boundary_II = bd_results[1][0]
-    boundary_III = bd_results[2][0]
-    boundary_avr = bd_results[3][0]
-    boundary_avl = bd_results[4][0]
-    boundary_avf = bd_results[5][0]
-    boundary_V1 = bd_results[6][0]
-    boundary_V2 = bd_results[7][0]
-    boundary_V3 = bd_results[8][0]
-    boundary_V4 = bd_results[9][0]
-    boundary_V5 = bd_results[10][0]
-    boundary_V6 = bd_results[11][0]
-
-    R_peak_index_I = bd_results[0][1]
-    R_peak_index_II = bd_results[1][1]
-    R_peak_index_III = bd_results[2][1]
-    R_peak_index_avr = bd_results[3][1]
-    R_peak_index_avl = bd_results[4][1]
-    R_peak_index_avf = bd_results[5][1]
-    R_peak_index_V1 = bd_results[6][1]
-    R_peak_index = bd_results[7][1]
-    R_peak_index = bd_results[8][1]
-    R_peak_index = bd_results[9][1]
-    R_peak_index = bd_results[10][1]
-    R_peak_index = bd_results[11][1]
-
-    P_vector_I,QRS_vector_I,T_vector_I = Feature_extraction(Denoised[:,0],boundary_I,R_peak_index_I)
-    P_vector_II,QRS_vector_II,T_vector_II = Feature_extraction(Denoised[:,1],boundary_II,R_peak_index_II)
-    P_vector_III,QRS_vector_III,T_vector_III = Feature_extraction(Denoised[:,2],boundary_III,R_peak_index_III)
-
-    print(QRS_vector_I)
-    print(QRS_vector_II)
-    print(QRS_vector_III)
-    '''
+    ################################################################
 
 
-    end_time = time.time()
-    print(end_time-start_time)
+    for j in range(0,12):
+
+        plt.figure(j+1)
+
+        X = np.arange(1,10001)
+
+        bd_values = []
+        for i in bd_results[j][0]:
+                bd_values.append(Denoised[i,j])
+
+        R_values = []
+        for i in bd_results[j][1]:
+                R_values.append(Denoised[i,j])
+
+        P_wave_idx = []
+        P_wave_values = []
+
+        for i in fe_results[j][0]:
+            if(i != -1):
+                i = int(i)
+                P_wave_idx.append(i)
+                P_wave_values.append(Denoised[i,j])
+
+        QRS_wave_idx = []
+        QRS_wave_values = []
+        for i in fe_results[j][1]:
+            if(i != -1):
+
+                i = int(i)
+                QRS_wave_idx.append(i)
+                QRS_wave_values.append(Denoised[i,j])
+
+        T_wave_idx = []
+        T_wave_values = []
+        for i in fe_results[j][2]:
+            if(i != -1):
+                i = int(i)
+                T_wave_idx.append(i)
+                T_wave_values.append(Denoised[i,j])
+
+        plt.plot(X,Denoised[:,j])
+        #plt.plot(bd_results[j][0],bd_values,'o')
+        #plt.plot(bd_results[j][1],R_values,'o')
+        plt.plot(P_wave_idx,P_wave_values,'*')
+        plt.plot(QRS_wave_idx,QRS_wave_values,'*')
+        plt.plot(T_wave_idx,T_wave_values,'*')
+
+    plt.show()
